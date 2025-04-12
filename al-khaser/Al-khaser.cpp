@@ -267,6 +267,7 @@ int main(int argc, char* argv[])
 	if (ENABLE_QEMU_CHECKS) {
 		print_category(TEXT("QEMU Detection"));
 		qemu_reg_key_value();
+		qemu_reg_keys();
 		qemu_processes();
 		qemu_dir();
 		exec_check(&qemu_firmware_SMBIOS, TEXT("Checking SMBIOS firmware  "));
@@ -283,7 +284,7 @@ int main(int argc, char* argv[])
 
 	/* KVM Detection */
 	if (ENABLE_KVM_CHECKS) {
-		print_category(TEXT("Xen Detection"));
+		print_category(TEXT("KVM Detection"));
 		kvm_files();
 		kvm_reg_keys();
 		exec_check(&kvm_dir, TEXT("Checking KVM virio directory "));
@@ -298,7 +299,8 @@ int main(int argc, char* argv[])
 
 	/* Paralles Detection */
 	if (ENABLE_PARALLELS_CHECKS) {
-		print_category(TEXT("Paralles Detection"));
+		print_category(TEXT("Parallels Detection"));
+		parallels_reg_keys();
 		parallels_process();
 		exec_check(&parallels_check_mac, TEXT("Checking Mac Address start with 00:1C:42 "));
 	}

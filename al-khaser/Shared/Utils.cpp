@@ -58,17 +58,87 @@ BOOL Is_RegKeyValueExists(HKEY hKey, const TCHAR* lpSubKey, const TCHAR* lpValue
 
 BOOL Is_RegKeyExists(HKEY hKey, const TCHAR* lpSubKey)
 {
-	HKEY hkResult = NULL;
-	TCHAR lpData[1024] = { 0 };
-	DWORD cbData = MAX_PATH;
+    // Check if the subkey contains any wildcard characters (* or ?)
+    if (_tcschr(lpSubKey, _T('*')) == NULL && _tcschr(lpSubKey, _T('?')) == NULL)
+    {
+        HKEY hkResult = NULL;
+		TCHAR lpData[1024] = { 0 };
+		DWORD cbData = MAX_PATH;
 
-	if (RegOpenKeyEx(hKey, lpSubKey, NULL, KEY_READ, &hkResult) == ERROR_SUCCESS)
-	{
-		RegCloseKey(hkResult);
-		return TRUE;
-	}
+		if (RegOpenKeyEx(hKey, lpSubKey, NULL, KEY_READ, &hkResult) == ERROR_SUCCESS)
+		{
+			RegCloseKey(hkResult);
+			return TRUE;
+		}
 
-	return FALSE;
+		return FALSE;
+    }
+    else
+    {
+        // Split the subkey into parent path and child pattern
+        const TCHAR* lastBackslash = _tcsrchr(lpSubKey, _T('\\'));
+        TCHAR parentPath[MAX_PATH] = {0};
+        TCHAR childPattern[MAX_PATH] = {0};
+
+        if (lastBackslash != NULL)
+        {
+            // Extract parent path (up to last backslash) and child pattern (after last backslash)
+            size_t parentLen = lastBackslash - lpSubKey;
+            _tcsncpy_s(parentPath, _countof(parentPath), lpSubKey, parentLen);
+            _tcscpy_s(childPattern, _countof(childPattern), lastBackslash + 1);
+        }
+        else
+        {
+            // Entire subkey is the child pattern; parent is the root of hKey
+            _tcscpy_s(childPattern, _countof(childPattern), lpSubKey);
+        }
+
+        // Open the parent key
+        HKEY hKeyParent = NULL;
+        LONG lResult = RegOpenKeyEx(hKey, parentPath, 0, KEY_READ, &hKeyParent);
+        if (lResult != ERROR_SUCCESS)
+        {
+            return FALSE; // Parent key does not exist
+        }
+
+        // Prepare uppercase version of the child pattern for case-insensitive comparison
+        TCHAR childPatternUpper[MAX_PATH];
+        _tcscpy_s(childPatternUpper, _countof(childPatternUpper), childPattern);
+        _tcsupr_s(childPatternUpper, _countof(childPatternUpper));
+
+        // Enumerate subkeys under the parent key
+        DWORD dwIndex = 0;
+        TCHAR subkeyName[MAX_PATH];
+        DWORD cchName = MAX_PATH;
+        BOOL bFound = FALSE;
+
+        while (1)
+        {
+            cchName = MAX_PATH;
+            lResult = RegEnumKeyEx(hKeyParent, dwIndex, subkeyName, &cchName, NULL, NULL, NULL, NULL);
+            if (lResult == ERROR_NO_MORE_ITEMS)
+                break;
+            if (lResult != ERROR_SUCCESS)
+                break;
+
+            // Convert subkey name to uppercase for case-insensitive matching
+            TCHAR subkeyUpper[MAX_PATH];
+            _tcscpy_s(subkeyUpper, _countof(subkeyUpper), subkeyName);
+            _tcsupr_s(subkeyUpper, _countof(subkeyUpper));
+
+            // Check if the subkey matches the pattern
+            if (PathMatchSpec(subkeyUpper, childPatternUpper))
+            {
+                bFound = TRUE;
+                break;
+            }
+
+            dwIndex++;
+        }
+
+        RegCloseKey(hKeyParent);
+        return bFound;
+    }
 }
 
 BOOL is_FileExists(TCHAR* szPath)
