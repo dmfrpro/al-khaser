@@ -170,6 +170,7 @@ int main(int argc, char* argv[])
 		known_usernames();
 		known_hostnames();
 		other_known_sandbox_environment_checks();
+		looking_glass_vdd_processes();
 		exec_check(&NumberOfProcessors, TEXT("Checking Number of processors in machine "));
 		exec_check(&idt_trick, TEXT("Checking Interupt Descriptor Table location "));
 		exec_check(&ldt_trick, TEXT("Checking Local Descriptor Table location "));
